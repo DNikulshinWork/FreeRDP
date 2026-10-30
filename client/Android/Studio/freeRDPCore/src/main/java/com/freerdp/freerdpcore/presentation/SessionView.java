@@ -41,7 +41,7 @@ import java.util.Stack;
 
 public class SessionView extends View
 {
-	public static final float MAX_SCALE_FACTOR = 3.0f;
+	public static final float MAX_SCALE_FACTOR = 8.0f;
 	public static final float MIN_SCALE_FACTOR = 0.75f;
 	private static final String TAG = "SessionView";
 	private static final float SCALE_FACTOR_DELTA = 0.0001f;
@@ -177,6 +177,19 @@ public class SessionView extends View
 	{
 		return scaleFactor;
 	}
+
+    // Zoom that makes a smaller-than-screen session fill the screen (aspect ratio kept).
+    // Never below 1.0, so large sessions keep their normal scrolling behaviour.
+    public float computeFitZoom(int availWidth, int availHeight)
+    {
+        if (width <= 0 || height <= 0 || availWidth <= 0 || availHeight <= 0)
+            return 1.0f;
+        float fit = Math.min((availWidth - touchPointerPaddingWidth) / (float)width,
+                             (availHeight - touchPointerPaddingHeight) / (float)height);
+        if (fit < 1.05f)
+            return 1.0f;
+        return Math.min(fit, MAX_SCALE_FACTOR);
+    }
 
 	public void setRailMode(boolean rail)
 	{

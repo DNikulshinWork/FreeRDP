@@ -454,7 +454,7 @@ public class SessionInputManager
 
 	@Override public void onTouchPointerResetScrollZoom()
 	{
-		sessionView.setZoom(1.0f);
+		sessionView.setZoom(sessionView.computeFitZoom(screenWidth, screenHeight));
 		scrollView.scrollTo(0, 0);
 	}
 
@@ -596,6 +596,7 @@ public class SessionInputManager
 
 		@Override public boolean onScaleBegin(ScaleGestureDetector detector)
 		{
+            scaleFactor = sessionView.getZoom();
 			scrollView.setScrollEnabled(false);
 			return true;
 		}

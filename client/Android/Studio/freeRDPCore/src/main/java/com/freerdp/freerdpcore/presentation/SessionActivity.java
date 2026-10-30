@@ -656,6 +656,7 @@ public class SessionActivity extends AppCompatActivity
 		Bitmap surface = session.getSurface() != null ? session.getSurface().getBitmap() : null;
 		inputManager.attachSession(session.getInstance(), surface);
 		inputManager.setScreenSize(screen_width, screen_height);
+        sessionView.setZoom(sessionView.computeFitZoom(screen_width, screen_height));
 		hideSystemBars();
 		View rootView = findViewById(R.id.session_root_view);
 		if (rootView != null)
