@@ -30,7 +30,7 @@
             android:singleLine="true"
             freerdp:bounds_default="640"
             freerdp:bounds_max="65536"
-            freerdp:bounds_min="640"
+            freerdp:bounds_min="200"
             app:useSimpleSummaryProvider="true" />
         <com.freerdp.freerdpcore.utils.IntEditTextPreference
             android:key="bookmark.height"
@@ -38,7 +38,7 @@
             android:singleLine="true"
             freerdp:bounds_default="480"
             freerdp:bounds_max="65536"
-            freerdp:bounds_min="480"
+            freerdp:bounds_min="200"
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
     <PreferenceCategory android:title="@string/settings_cat_scale">

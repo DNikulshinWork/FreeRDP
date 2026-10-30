@@ -1,0 +1,113 @@
+name: Android release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: client/Android/Studio
+    env:
+      NDK_VERSION: 29.0.13113456
+      CMAKE_VERSION: 4.1.2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37" "build-tools;37.0.0" \
+            "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Compute version
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            NAME="${GITHUB_REF_NAME#v}"
+            CORE="${NAME%%-*}"
+            IFS=. read -r MA MI PA <<< "$CORE"
+            CODE=$(( 10#${MA:-0} * 10000 + 10#${MI:-0} * 100 + 10#${PA:-0} ))
+          else
+            NAME="0.0.0-dev.${GITHUB_RUN_NUMBER}"
+            CODE="${GITHUB_RUN_NUMBER}"
+          fi
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: Write release.properties
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cat > release.properties <<PROPS
+          RELEASE_STORE_FILE=$RUNNER_TEMP/release.jks
+          RELEASE_STORE_PASSWORD=$KS_PASS
+          RELEASE_KEY_ALIAS=$KEY_ALIAS
+          RELEASE_KEY_PASSWORD=$KEY_PASS
+          ABI_FILTERS=arm64-v8a
+          SPLIT_ARCHITECTURES=arm64-v8a
+          SPLIT_ENABLED=false
+          NDK_VERSION=$NDK_VERSION
+          CMAKE_VERSION=$CMAKE_VERSION
+          VERSION_NAME=${{ steps.ver.outputs.name }}
+          VERSION_CODE=${{ steps.ver.outputs.code }}
+          PROPS
+          sed -i 's/^[[:space:]]*//' release.properties
+
+      - name: Build release APK
+        run: ./gradlew --no-daemon :aFreeRDP:assembleRelease
+
+      - name: Collect APK
+        id: apk
+        run: |
+          SRC=$(find aFreeRDP/build/outputs/apk/release -name '*.apk' | head -n1)
+          OUT="aFreeRDP-${{ steps.ver.outputs.name }}-arm64-v8a.apk"
+          cp "$SRC" "$OUT"
+          echo "path=client/Android/Studio/$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Verify signature
+        run: |
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --print-certs "aFreeRDP-${{ steps.ver.outputs.name }}-arm64-v8a.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aFreeRDP-arm64-v8a
+          path: ${{ steps.apk.outputs.path }}
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.path }}
+          generate_release_notes: true
