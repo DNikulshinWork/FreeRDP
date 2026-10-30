@@ -43,6 +43,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Pin FreeRDP library version
+        working-directory: ${{ github.workspace }}
+        run: |
+          RAW=$(sed -n 's/.*set(RAW_VERSION_STRING "\(.*\)").*/\1/p' cmake/GetProjectVersion.cmake | head -n1)
+          echo "FreeRDP lib version: $RAW"
+          printf '%s\n' "$RAW" > .source_tag
+
       - name: Prepare signing key
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
