@@ -83,6 +83,7 @@ jobs:
           RELEASE_KEY_ALIAS=$KEY_ALIAS
           RELEASE_KEY_PASSWORD=$KEY_PASS
           ABI_FILTERS=arm64-v8a
+          MIN_API=28
           SPLIT_ARCHITECTURES=arm64-v8a
           SPLIT_ENABLED=false
           NDK_VERSION=$NDK_VERSION
